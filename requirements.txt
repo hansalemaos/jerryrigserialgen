@@ -1,0 +1,7 @@
+cryptography
+dill
+isiter
+pycryptodomex
+requests
+touchtouch
+xxhash
