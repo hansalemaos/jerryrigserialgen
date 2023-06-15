@@ -15,7 +15,10 @@ The serial number system can be cracked easily (which one can't?), but it should
 
 
 ```python
-from jerryrigserialgen import Serialgenerator
+from jerryrigserialgen import Serialgenerator, serialgenconfig
+
+# transfer.sh seems to be offline (https://github.com/dutchcoders/transfer.sh/issues/556), that's why i added this:
+serialgenconfig.transfershdomain = 'https://temp.sh'
 
 # Generates serial numbers
 # pip install jerryrigserialgen
@@ -33,6 +36,7 @@ seri = Serialgenerator(
 )
 serialnumber, debuginfo = seri.upload()
 print(serialnumber) # This is the serial number you are going to give to your client, like: 566978376a4b356956775955427a4779636e533856705a59534d314369387735526e59744230396f6c6771795256675a31365a756947344753616d3757536d5961704f736a362f63506871724a792f3845664d4845773d3d475ac18a6927938b4ede1613058f253e
+
 
 # output
 # File written to: c:\mynicefolder\new\2023_03_23_09_23_18_28484401.cfg

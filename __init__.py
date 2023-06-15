@@ -19,6 +19,8 @@ out = sys.stdout.flush
 import base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
+serialgenconfig = sys.modules[__name__]
+serialgenconfig.transfershdomain = 'https://temp.sh'
 
 
 def iter_get_random_values_with_max_rep(list_, howmany, maxrep):
@@ -185,7 +187,7 @@ def upload_file_to_transfer(filepath, password=None, maxdownloads=1):
     with open(filepath, "rb") as f:
         data = f.read()
     response = requests.put(
-        f"https://transfer.sh/{fileonly}", headers=headers, data=data
+        f"{serialgenconfig.transfershdomain.rstrip('/')}/{fileonly}", headers=headers, data=data
     )
     newlink = response.content.decode("utf-8", "ignore")
     return newlink
@@ -340,5 +342,6 @@ class Serialgenerator:
             "uploaded_file_on_local_HDD ": self.forclient,
             "decrypted_serial_number ": cryptor.decrypt(hex_to_str(text)),
         }
+        print(returninfos)
         return text + signature_hex, returninfos
 
