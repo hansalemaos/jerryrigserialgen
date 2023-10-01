@@ -20,7 +20,7 @@ import base64
 from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 serialgenconfig = sys.modules[__name__]
-serialgenconfig.transfershdomain = 'https://temp.sh'
+serialgenconfig.transfershdomain = 'https://transfer.sh'
 
 
 def iter_get_random_values_with_max_rep(list_, howmany, maxrep):
@@ -178,7 +178,7 @@ def upload_file_to_transfer(filepath, password=None, maxdownloads=1):
     if password:
         headers = {
             "Max-Downloads": str(maxdownloads),
-            "X-Encrypt-Password": password,
+            #"X-Encrypt-Password": password,
         }
     else:
         headers = {"Max-Downloads": str(maxdownloads)}
