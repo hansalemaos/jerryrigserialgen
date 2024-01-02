@@ -1,6 +1,6 @@
 # jerry-rigged license system with UUID check (preventing more than one installation) and expiration date
 
-### Tested against Python 3.9.16 (Anaconda) -  Windows 10
+### Tested against Python 3.11.7 -  Windows 11
 
 #### jerry-rigged???
 
@@ -15,31 +15,31 @@ The serial number system can be cracked easily (which one can't?), but it should
 
 
 ```python
-from jerryrigserialgen import Serialgenerator, serialgenconfig
-
-# transfer.sh seems to be offline (https://github.com/dutchcoders/transfer.sh/issues/556), that's why i added this:
-serialgenconfig.transfershdomain = 'https://temp.sh'
+from jerryrigserialgen import Serialgenerator
 
 # Generates serial numbers
 # pip install jerryrigserialgen
 seri = Serialgenerator(
     product="myproduct",  # Name of the product
-    savefolder="c:\\mynicefolder\\new",  # just for the record - files are not needed
+    savefolder=None,  # just for the record - files are not needed
     hardcodedpasswort_transfer="topsecret",  # for transfer.sh - must be hard-coded in the app the client uses
     hardcodedpasswort_url="5248614597016233",  # 16 digits to encrypt the URL - must be hard-coded in the app the client uses
     addinformationtoserial=(
         "info1",
         "info2",
     ),  # extra information you want to transmit to the app the client uses
+    # optional informations
     licensedays=17,  # duration of the license - from today on
     subtract_from_time=0,  # for debugging - to create expired licenses
+    oshi = True, # Use oshi as an alternative to transfer.sh when it is unstable
+    expire = 7, # Expiration time for serial key
+    max_activations = 1 # max ativations by every serial key
 )
 serialnumber, debuginfo = seri.upload()
 print(serialnumber) # This is the serial number you are going to give to your client, like: 566978376a4b356956775955427a4779636e533856705a59534d314369387735526e59744230396f6c6771795256675a31365a756947344753616d3757536d5961704f736a362f63506871724a792f3845664d4845773d3d475ac18a6927938b4ede1613058f253e
 
-
 # output
-# File written to: c:\mynicefolder\new\2023_03_23_09_23_18_28484401.cfg
+# File written to: c:files\2023_03_23_09_23_18_28484401.cfg
 # 566978376a4b356956775955427a4779636e533856705a59534d314369387735526e59744230396f6c6771795256675a31365a756947344753616d3757536d5961704f736a362f63506871724a792f3845664d4845773d3d475ac18a6927938b4ede1613058f253e
 
 ##########################################################################
@@ -65,4 +65,7 @@ print(isvalid, daysleft, duration_of_license, product, otherinfos)
 # True 17 17 myproduct ['info1', 'info2']
 
 # Compile the code of your app using PyInstaller or some other tool
+# Use PyArmor or another obfuscation tool to prevent reverse engineering of the code
+
+
 ```
