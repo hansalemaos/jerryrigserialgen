@@ -21,6 +21,7 @@ from cryptography.hazmat.primitives import serialization, hashes
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 serialgenconfig = sys.modules[__name__]
 serialgenconfig.transfershdomain = 'https://transfer.sh'
+serialgenconfig.oshishdomain  = 'https://oshi.at'
 
 
 def iter_get_random_values_with_max_rep(list_, howmany, maxrep):
@@ -139,6 +140,7 @@ def get_infos_from_serial(serialnumberk, keyba):
     duid["key"] = key
     duid["cipher"] = cipher
     duid["orgmessage"] = orgmessage
+    
     duid["days"] = d
     duid["timestamp"] = ts
     duid["daysleft"] = math.ceil(((duid["timestamp"] + d * 86400) - time()) / 86400)
@@ -174,14 +176,19 @@ def get_tmpfile(suffix=".bat"):
     return filename
 
 
-def upload_file_to_transfer(filepath, password=None, maxdownloads=1):
+def upload_file_to_transfer(filepath, password, maxdownloads, expire):
+
     if password:
         headers = {
             "Max-Downloads": str(maxdownloads),
-            #"X-Encrypt-Password": password,
+            "X-Encrypt-Password": password,
+            "Max-Days": str(expire)
         }
     else:
-        headers = {"Max-Downloads": str(maxdownloads)}
+        headers = {
+            "Max-Downloads": str(maxdownloads),
+            "Max-Days": str(expire)
+        }
 
     fileonly = filepath.split(os.sep)[-1]
     with open(filepath, "rb") as f:
@@ -189,8 +196,47 @@ def upload_file_to_transfer(filepath, password=None, maxdownloads=1):
     response = requests.put(
         f"{serialgenconfig.transfershdomain.rstrip('/')}/{fileonly}", headers=headers, data=data
     )
-    newlink = response.content.decode("utf-8", "ignore")
-    return newlink
+    
+    if response.status_code == 200:
+        return response.content.decode("utf-8", "ignore")
+    else:
+        response.raise_for_status()
+
+
+def upload_file_to_oshi(filepath, maxdownloads, expire):
+    fileonly = filepath.split(os.sep)[-1]
+
+    with open(filepath, "rb") as f:
+        files = {'f': (fileonly, f.read())}
+
+    data = {
+        "autodestroy": str(maxdownloads),
+        "expire": str(expire*1440)
+    }
+
+    response = requests.post(
+        serialgenconfig.oshishdomain, files=files, data=data
+    )
+    
+    if response.status_code == 200:
+        lines = response.text.split('\n')
+        for line in lines:
+            if line.startswith("DL:"):
+                download_link = line.split("DL:")[1].strip()
+                return download_link
+    else:
+        response.raise_for_status()
+
+def upload_file(filepath, password=None, maxdownloads=1, expire=7, oshi=True):
+
+    if oshi:
+        return upload_file_to_oshi(
+            filepath, maxdownloads, expire=expire
+            )
+    else:
+        return upload_file_to_transfer(
+            filepath, password=password, maxdownloads=maxdownloads, expire=expire
+        )
 
 
 def write_message_to_hd(message):
@@ -266,31 +312,39 @@ class Serialgenerator:
         savefolder,
         hardcodedpasswort_transfer,
         hardcodedpasswort_url, addinformationtoserial=(),
-
-            licensedays=30,
-        subtract_from_time=0,
+        licensedays=30,
+        subtract_from_time=0, 
+        oshi=False, 
+        expire=7,
+        max_activations=1
     ):
         if not isiter(addinformationtoserial):
             addinformationtoserial = [addinformationtoserial]
         self.publicrsa, self.privatersa = get_rsa_keys()
-        self.limit = licensedays
+        self.limit = licensedays - subtract_from_time
         self.product = product
         # folder to save generated license files
-        self.folder = savefolder
+        if not savefolder:
+            self.folder = os.path.join(os.getcwd(), 'files')
+            os.makedirs(self.folder, exist_ok=True)
+        else:  
+            self.folder = savefolder
         self.licensefileonhdd, self.forclient = get_filename(self.folder)
         self.subtract_from_time = subtract_from_time
         # hardcoded hardcodedpasswort_transfer in software (for transfer.sh)
         self.password = hardcodedpasswort_transfer
-
+        self.maxdownloads = max_activations
         # save as bin file
         self.filepath = write_message_to_hd(self.publicrsa)
-
+        self.oshi=oshi
+        self.expire=expire
         # make the file hash part of the serial number
         filehash = get_file_hash(self.filepath)
 
         # upload to transfer.sh - file will be deleted after the first download, link is enctypted and part of the serial number
-        newlink = upload_file_to_transfer(
-            self.filepath, password=self.password, maxdownloads=1
+        newlink = upload_file(
+            self.filepath, password=self.password, 
+            maxdownloads=self.maxdownloads, oshi=oshi, expire=expire
         )
 
         # myprod = decoded serial
@@ -323,9 +377,11 @@ class Serialgenerator:
         self.registered_timestamp = self.duid["timestamp"]
         self.registered_days = self.duid["days"]
         self.registered_daysleft = self.duid["daysleft"]
+        
 
-        linkforclient = upload_file_to_transfer(
-            self.forclient, password=self.password, maxdownloads=1
+        linkforclient = upload_file(
+            self.forclient, password=self.password,
+           maxdownloads=self.maxdownloads, oshi=self.oshi, expire=self.expire
         )
 
         cryptor = Cryptor(self.hardcodedurldec)
